@@ -1,11 +1,16 @@
 import math
 import os
+import random
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import yaml
 from matplotlib import patches
 from PIL import Image
 
+
+# DATASET_PATH = os.path.join(os.getcwd(), 'datasets')
+DATASET_PATH = "datasets"
 
 def load_classes() -> list:
     """
@@ -14,8 +19,8 @@ def load_classes() -> list:
              - 'name': class name (str)
              - 'rgba': RGBA color (tuple of floats)
     """
-    path = "./data/data.yaml"
-    with open(path, 'r') as f:
+    yaml_path = os.path.join(DATASET_PATH, "data.yaml")
+    with open(yaml_path, 'r') as f:
         data = yaml.safe_load(f)
 
     classes = data['names']
@@ -33,7 +38,7 @@ def load_labels_df(split: str) -> pd.DataFrame:
     :param split: str. "train", "valid" or "test"
     :return: A pandas DataFrame
     """
-    labels_dir = f"./data/{split}/labels"
+    labels_dir = os.path.join(DATASET_PATH, split, "labels")
     data = []
     for filename in os.listdir(labels_dir):
         filepath = os.path.join(labels_dir, filename)
@@ -63,14 +68,15 @@ def plot_images(image_ids: list, df: pd.DataFrame, images_dir: str, classes: lis
     axes = axes.flatten()
 
     for i, image_id in enumerate(image_ids):
-        image_path = f"{images_dir}/{image_id}.jpg"
+        image_path = os.path.join(images_dir, f"{image_id}.jpg")
         image = Image.open(image_path)
         w, h = image.size
         labels_df = df[df['image_id'] == image_id]
 
         ax = axes[i]
         ax.imshow(image)
-        ax.set_title(f"image_id={image_id.split(".")[0]}")
+        title = image_id.split(".")[0]
+        ax.set_title(f"image_id={title}")
         ax.axis('on')
         padding = 10
         ax.set_xlim([-padding, w + padding])
@@ -97,9 +103,19 @@ def plot_images(image_ids: list, df: pd.DataFrame, images_dir: str, classes: lis
     plt.show()
 
 
+def sample_image_paths(split: str, n: int):
+    images_dir = os.path.join(DATASET_PATH, split, "images")
+    filenames = [f for f in os.listdir(images_dir)]
+    if len(filenames) < n:
+        n = len(filenames)
+    filenames = random.sample(filenames, n)
+    paths = [os.path.join(images_dir, f) for f in filenames]
+    return paths
+
+
 if __name__ == "__main__":
     classes = load_classes()
-    print(classes)
+    # print(classes)
 
     train_df = load_labels_df("train")
     # print(train_df.head())
@@ -107,9 +123,11 @@ if __name__ == "__main__":
     n_samples = 8
     image_ids = list(train_df["image_id"].drop_duplicates().sample(n=n_samples, random_state=1).values)
     samples_df = train_df[train_df["image_id"].isin(image_ids)]
-    print(samples_df)
+    # print(samples_df)
 
-    train_images_dir = "./data/train/images"
+    train_images_dir = os.path.join(DATASET_PATH, "train", "images")
     plot_images(image_ids, samples_df, train_images_dir, classes)
 
+    image_paths = sample_image_paths("test", 10)
+    print(image_paths)
 
